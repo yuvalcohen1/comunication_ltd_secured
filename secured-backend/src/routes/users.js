@@ -16,7 +16,6 @@ const {
 router.post("/register", async (req, res) => {
   const { username, email, password } = req.body;
 
-  // 1. Validate input
   if (!username || !email || !password)
     return res.status(400).json({ error: "Missing fields" });
 
@@ -25,7 +24,6 @@ router.post("/register", async (req, res) => {
     return res.status(400).json({ error: "Password invalid", details: errors });
 
   try {
-    // 2. Check if user exists
     const [existing] = await db.query(
       "SELECT id FROM users WHERE username = ? OR email = ?",
       [username, email]
@@ -35,7 +33,6 @@ router.post("/register", async (req, res) => {
         .status(400)
         .json({ error: "Username or email already exists" });
 
-    // 3. Generate salt and hash
     const salt = generateSalt();
     const passwordHash = hashPassword(password, salt);
 
@@ -60,7 +57,6 @@ router.post("/login", async (req, res) => {
     return res.status(400).json({ error: "Username and password required" });
 
   try {
-    // שליפת המשתמש מה-DB
     const [rows] = await db.query("SELECT * FROM users WHERE username = ?", [
       username,
     ]);
@@ -69,24 +65,20 @@ router.post("/login", async (req, res) => {
 
     const user = rows[0];
 
-    // בדיקה אם החשבון נעול
     if (user.failed_login_attempts >= maxLoginAttempts)
       return res
         .status(403)
         .json({ error: "Account locked due to too many failed attempts" });
 
-    // יצירת hash חדש מהסיסמה שסופקה
     const hashedInput = hashPassword(password, user.password_salt);
 
     if (hashedInput === user.password_hash) {
-      // הצלחה: אפס את הניסיונות הכושלים
       await db.query(
         "UPDATE users SET failed_login_attempts = 0 WHERE id = ?",
         [user.id]
       );
       return res.status(200).json({ message: "Login successful", user });
     } else {
-      // כישלון: הגדלת מספר הניסיונות
       const newAttempts = user.failed_login_attempts + 1;
       await db.query(
         "UPDATE users SET failed_login_attempts = ? WHERE id = ?",
@@ -122,13 +114,11 @@ router.post("/change-password", async (req, res) => {
 
     const user = rows[0];
 
-    // בדיקה שהסיסמה הנוכחית נכונה
     const currentHash = hashPassword(currentPassword, user.password_salt);
     if (currentHash !== user.password_hash) {
       return res.status(401).json({ error: "Incorrect current password" });
     }
 
-    // בדיקה שהסיסמה החדשה שונה מהנוכחית
     const newHash = hashPassword(newPassword, user.password_salt);
     if (newHash === user.password_hash) {
       return res
@@ -136,7 +126,6 @@ router.post("/change-password", async (req, res) => {
         .json({ error: "New password must be different from current" });
     }
 
-    // בדיקת תקינות הסיסמה
     const validationErrors = validatePassword(newPassword);
     if (validationErrors.length > 0) {
       return res.status(400).json({
@@ -145,7 +134,6 @@ router.post("/change-password", async (req, res) => {
       });
     }
 
-    // בדיקה מול היסטוריית סיסמאות
     const history = JSON.parse(user.last_passwords || "[]");
     if (history.includes(newHash)) {
       return res
@@ -153,7 +141,6 @@ router.post("/change-password", async (req, res) => {
         .json({ error: "Password was recently used. Choose a different one." });
     }
 
-    // יצירת salt חדש, שמירת הסיסמה החדשה, עדכון היסטוריה
     const newSalt = generateSalt();
     const finalHash = hashPassword(newPassword, newSalt);
 
@@ -193,18 +180,15 @@ router.post("/forgot-password", async (req, res) => {
 
     const user = rows[0];
 
-    // צור טוקן אקראי באמצעות SHA-1
     const rawToken = crypto.randomBytes(20).toString("hex");
     const resetToken = crypto.createHash("sha1").update(rawToken).digest("hex");
     const expiry = new Date(Date.now() + 1000 * 60 * 15); // תוקף של 15 דקות
 
-    // עדכן בטבלת users
     await db.query(
       "UPDATE users SET reset_token = ?, token_expiry = ? WHERE id = ?",
       [resetToken, expiry, user.id]
     );
 
-    // שלח את הטוקן (לצורך הדוגמה נדפיס)
     console.log(
       `Password reset link for ${email}: http://localhost:3000/reset-password?token=${resetToken}`
     );
@@ -226,7 +210,6 @@ router.post("/reset-password", async (req, res) => {
   }
 
   try {
-    // חפש את המשתמש לפי טוקן
     const [rows] = await db.query(
       "SELECT * FROM users WHERE reset_token = ? AND token_expiry > NOW()",
       [token]
@@ -238,7 +221,6 @@ router.post("/reset-password", async (req, res) => {
 
     const user = rows[0];
 
-    // בדוק אם הסיסמה עומדת בדרישות
     const validationErrors = validatePassword(newPassword);
     if (validationErrors.length > 0) {
       return res.status(400).json({
@@ -247,19 +229,16 @@ router.post("/reset-password", async (req, res) => {
       });
     }
 
-    // ודא שהסיסמה החדשה שונה מהקודמת
     const newHash = hashPassword(newPassword, user.password_salt);
     if (newHash === user.password_hash) {
       return res.status(400).json({ error: "New password must be different" });
     }
 
-    // בדיקה מול היסטוריית סיסמאות
     const history = JSON.parse(user.last_passwords || "[]");
     if (history.includes(newHash)) {
       return res.status(400).json({ error: "Password was recently used" });
     }
 
-    // צור salt חדש
     const newSalt = crypto.randomBytes(16).toString("hex");
     const finalHash = hashPassword(newPassword, newSalt);
     const newHistory = [user.password_hash, ...history].slice(0, 3);
