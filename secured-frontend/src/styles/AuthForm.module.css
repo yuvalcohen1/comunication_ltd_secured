@@ -1,0 +1,31 @@
+/* styles/AuthForm.css */
+.formContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.authForm {
+  width: 100%;
+  max-width: 400px;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.authForm h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.errorText {
+  color: red;
+  margin-top: 0.5rem;
+}
+
+.successText {
+  color: green;
+  margin-top: 0.5rem;
+}

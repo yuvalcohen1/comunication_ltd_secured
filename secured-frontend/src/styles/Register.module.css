@@ -1,0 +1,35 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: #f5f7fa;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.form {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.errorBox {
+  margin-top: 1rem;
+  padding: 0.8rem;
+  background: #ffe0e0;
+  color: #900;
+  border-radius: 8px;
+  text-align: right;
+  direction: rtl;
+}
+
+.message {
+  margin-top: 1rem;
+  font-weight: 500;
+  color: green;
+}
